@@ -15,28 +15,28 @@ import javax.lang.model.element.Modifier;
 public class GenerateFiles {
     public static enum InjectPattern {
         PATTERN1((writer, name) ->
-            writer.emitImports("javax.inject.Inject")
-        ,(writer, name) ->
-            writer.emitAnnotation("Inject")
+                writer.emitImports("javax.inject.Inject")
+                , (writer, name) ->
+                writer.emitAnnotation("Inject")
         ),
         PATTERN2((writer, name) ->
-            writer.emitImports("javax.inject.Inject")
-                    .emitImports("javax.inject.Named")
-        ,(writer, name) ->
-            writer.emitAnnotation("Named", "\\" + name + "\\")
-                    .emitAnnotation("Inject")
+                writer.emitImports("javax.inject.Inject")
+                        .emitImports("javax.inject.Named")
+                , (writer, name) ->
+                writer.emitAnnotation("Named", "\"" + name + "\"")
+                        .emitAnnotation("Inject")
         ),
         PATTERN3((writer, name) ->
-            writer.emitImports("org.springframework.beans.factory.annotation.Autowired")
-        ,(writer, name) ->
-            writer.emitAnnotation("Autowired")
+                writer.emitImports("org.springframework.beans.factory.annotation.Autowired")
+                , (writer, name) ->
+                writer.emitAnnotation("Autowired")
         ),
         PATTERN4((writer, name) ->
                 writer.emitImports("org.springframework.beans.factory.annotation.Autowired")
                         .emitImports("org.springframework.beans.factory.annotation.Qualifier"),
                 (writer, name) ->
-                writer.emitAnnotation("Qualifier", "\\" + name + "\\")
-                        .emitAnnotation("Autowired")),
+                        writer.emitAnnotation("Qualifier", "\"" + name + "\"")
+                                .emitAnnotation("Autowired")),
         PATTERN5((writer, name) ->
                 writer.emitImports("javax.annotation.Resource"),
                 (writer, name) ->
@@ -56,19 +56,50 @@ public class GenerateFiles {
     }
 
     public static void main(String[] args) throws Exception {
-        String basePackage = "demo";
-        String servicePackage = basePackage + ".service";
-        String controllerPackage = basePackage + ".controller";
-        InjectPattern injectPattern = InjectPattern.PATTERN5;
+        String baseDir = "./demo/src/main/java/";
+        Runtime.getRuntime().exec("rm -rf " + baseDir);
 
         for (InjectPattern pattern : InjectPattern.values()) {
-            String baseDir = pattern.name().toLowerCase() + "/src/";
+            String basePackage = pattern.name().toLowerCase();
+            String servicePackage = basePackage + ".service";
+            String controllerPackage = basePackage + ".controller";
+
+            ///
+
             Path serviceDir = Paths.get(baseDir + servicePackage.replace('.', '/'));
             Files.createDirectories(serviceDir);
             Path controllerDir = Paths.get(baseDir + controllerPackage.replace('.', '/'));
             Files.createDirectories(controllerDir);
+            ///
 
-            int classCount = 100;
+
+            int classCount = 1000;
+            String mainJava = "Main.java";
+            Path mainFile = Paths.get(baseDir + basePackage, mainJava);
+            try (Writer printWriter = Files.newBufferedWriter(mainFile)) {
+                JavaWriter writer = new JavaWriter(printWriter);
+                writer.emitPackage(basePackage)
+                        .emitImports("org.springframework.context.ApplicationContext",
+                                "org.springframework.context.annotation.AnnotationConfigApplicationContext",
+                                "org.springframework.util.StopWatch",
+                                pattern.name().toLowerCase() + ".controller.FooController0001")
+                        .beginType(basePackage + "." + "Main", "class", EnumSet.of(PUBLIC))
+                        .beginMethod("void", "main", EnumSet.of(PUBLIC, STATIC), "String[]", "args")
+                        .emitStatement("StopWatch stopWatch = new StopWatch()")
+                        .emitStatement("stopWatch.start()")
+                        .emitStatement("ApplicationContext ctx = new AnnotationConfigApplicationContext(\"" + pattern.name().toLowerCase() + "\")")
+                        .emitStatement("stopWatch.stop()")
+                        .emitStatement("stopWatch.start()")
+                        .emitStatement("System.out.println(ctx.getBean(FooController0001.class).getMessage())")
+                        .emitStatement("stopWatch.stop()")
+                        .emitStatement("System.out.println(\"pattern = " + pattern + "\")")
+                        .emitStatement("System.out.println(\"count = \" + " + classCount + ")")
+                        .emitStatement("System.out.println(stopWatch.prettyPrint())")
+                        .endMethod()
+                        .endType();
+                printWriter.flush();
+            }
+
             for (int i = 1; i <= classCount; i++) {
                 String number = String.format("%04d", i);
                 String serviceName = "FooService" + number;
@@ -112,12 +143,12 @@ public class GenerateFiles {
                     JavaWriter writer = new JavaWriter(printWriter);
                     writer.emitPackage(controllerPackage)
                             .emitImports("org.springframework.stereotype.Component");
-                    injectPattern.emitImports.emit(writer, lowerCamelService);
+                    pattern.emitImports.emit(writer, lowerCamelService);
                     writer.emitImports(servicePackage + "." + serviceName)
                             .emitEmptyLine()
                             .emitAnnotation("Component")
                             .beginType(controllerName, "class", EnumSet.of(PUBLIC));
-                    injectPattern.emitAnnotations.emit(writer, lowerCamelService);
+                    pattern.emitAnnotations.emit(writer, lowerCamelService);
                     writer.emitField(serviceName, lowerCamelService)
                             .emitEmptyLine()
                             .beginMethod("String", "getMessage", EnumSet.of(PUBLIC))
@@ -132,21 +163,24 @@ public class GenerateFiles {
 }
 
 /**
- Copyright 2013 Square, Inc.
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+ * Copyright 2013 Square, Inc.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-/** A utility class which aids in generating Java source files. */
+
+/**
+ * A utility class which aids in generating Java source files.
+ */
 class JavaWriter implements Closeable {
     private static final Pattern TYPE_PATTERN = Pattern
             .compile("(?:[\\w$]+\\.)*([\\w\\.*$]+)");
@@ -155,7 +189,9 @@ class JavaWriter implements Closeable {
 
     private static final String INDENT = "  ";
 
-    /** Map fully qualified type names to their short names. */
+    /**
+     * Map fully qualified type names to their short names.
+     */
     private final Map<String, String> importedTypes = new LinkedHashMap<String, String>();
 
     private String packagePrefix;
@@ -193,7 +229,9 @@ class JavaWriter implements Closeable {
         return indent;
     }
 
-    /** Emit a package declaration and empty line. */
+    /**
+     * Emit a package declaration and empty line.
+     */
     public JavaWriter emitPackage(String packageName) throws IOException {
         if (this.packagePrefix != null) {
             throw new IllegalStateException();
@@ -290,7 +328,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Try to compress a fully-qualified class name to only the class name. */
+    /**
+     * Try to compress a fully-qualified class name to only the class name.
+     */
     public String compressType(String type) {
         StringBuilder sb = new StringBuilder();
         if (this.packagePrefix == null) {
@@ -347,6 +387,7 @@ class JavaWriter implements Closeable {
 
     /**
      * Returns true if the imports contain a class with same simple name as {@code compressed}.
+     *
      * @param compressed simple name of the type
      */
     private boolean isAmbiguous(String compressed) {
@@ -355,6 +396,7 @@ class JavaWriter implements Closeable {
 
     /**
      * Emits an initializer declaration.
+     *
      * @param isStatic true if it should be an static initializer, false for an instance initializer.
      */
     public JavaWriter beginInitializer(boolean isStatic) throws IOException {
@@ -369,7 +411,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Ends the current initializer declaration. */
+    /**
+     * Ends the current initializer declaration.
+     */
     public JavaWriter endInitializer() throws IOException {
         popScope(Scope.INITIALIZER);
         indent();
@@ -379,6 +423,7 @@ class JavaWriter implements Closeable {
 
     /**
      * Emits a type declaration.
+     *
      * @param kind such as "class", "interface" or "enum".
      */
     public JavaWriter beginType(String type, String kind) throws IOException {
@@ -387,21 +432,23 @@ class JavaWriter implements Closeable {
 
     /**
      * Emits a type declaration.
+     *
      * @param kind such as "class", "interface" or "enum".
      */
     public JavaWriter beginType(String type, String kind,
-            Set<Modifier> modifiers) throws IOException {
+                                Set<Modifier> modifiers) throws IOException {
         return beginType(type, kind, modifiers, null);
     }
 
     /**
      * Emits a type declaration.
-     * @param kind such as "class", "interface" or "enum".
+     *
+     * @param kind        such as "class", "interface" or "enum".
      * @param extendsType the class to extend, or null for no extends clause.
      */
     public JavaWriter beginType(String type, String kind,
-            Set<Modifier> modifiers, String extendsType,
-            String... implementsTypes) throws IOException {
+                                Set<Modifier> modifiers, String extendsType,
+                                String... implementsTypes) throws IOException {
         indent();
         emitModifiers(modifiers);
         out.write(kind);
@@ -429,7 +476,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Completes the current type declaration. */
+    /**
+     * Completes the current type declaration.
+     */
     public JavaWriter endType() throws IOException {
         popScope(Scope.TYPE_DECLARATION, Scope.INTERFACE_DECLARATION);
         types.pop();
@@ -438,20 +487,26 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Emits a field declaration. */
+    /**
+     * Emits a field declaration.
+     */
     public JavaWriter emitField(String type, String name) throws IOException {
         return emitField(type, name, EnumSet.noneOf(Modifier.class), null);
     }
 
-    /** Emits a field declaration. */
+    /**
+     * Emits a field declaration.
+     */
     public JavaWriter emitField(String type, String name,
-            Set<Modifier> modifiers) throws IOException {
+                                Set<Modifier> modifiers) throws IOException {
         return emitField(type, name, modifiers, null);
     }
 
-    /** Emits a field declaration. */
+    /**
+     * Emits a field declaration.
+     */
     public JavaWriter emitField(String type, String name,
-            Set<Modifier> modifiers, String initialValue) throws IOException {
+                                Set<Modifier> modifiers, String initialValue) throws IOException {
         indent();
         emitModifiers(modifiers);
         emitCompressedType(type);
@@ -481,13 +536,14 @@ class JavaWriter implements Closeable {
      * <p>
      * A {@code null} return type may be used to indicate a constructor, but {@link #beginConstructor(Set, String...)} should be
      * preferred. This behavior may be removed in a future release.
+     *
      * @param returnType the method's return type, or null for constructors
-     * @param name the method name, or the fully qualified class name for constructors.
-     * @param modifiers the set of modifiers to be applied to the method
+     * @param name       the method name, or the fully qualified class name for constructors.
+     * @param modifiers  the set of modifiers to be applied to the method
      * @param parameters alternating parameter types and names.
      */
     public JavaWriter beginMethod(String returnType, String name,
-            Set<Modifier> modifiers, String... parameters) throws IOException {
+                                  Set<Modifier> modifiers, String... parameters) throws IOException {
         return beginMethod(returnType, name, modifiers, Arrays
                 .asList(parameters), null);
     }
@@ -497,15 +553,16 @@ class JavaWriter implements Closeable {
      * <p>
      * A {@code null} return type may be used to indicate a constructor, but {@link #beginConstructor(Set, List, List)} should
      * be preferred. This behavior may be removed in a future release.
-     * @param returnType the method's return type, or null for constructors.
-     * @param name the method name, or the fully qualified class name for constructors.
-     * @param modifiers the set of modifiers to be applied to the method
-     * @param parameters alternating parameter types and names.
+     *
+     * @param returnType  the method's return type, or null for constructors.
+     * @param name        the method name, or the fully qualified class name for constructors.
+     * @param modifiers   the set of modifiers to be applied to the method
+     * @param parameters  alternating parameter types and names.
      * @param throwsTypes the classes to throw, or null for no throws clause.
      */
     public JavaWriter beginMethod(String returnType, String name,
-            Set<Modifier> modifiers, List<String> parameters,
-            List<String> throwsTypes) throws IOException {
+                                  Set<Modifier> modifiers, List<String> parameters,
+                                  List<String> throwsTypes) throws IOException {
         indent();
         emitModifiers(modifiers);
         if (returnType != null) {
@@ -517,7 +574,7 @@ class JavaWriter implements Closeable {
         }
         out.write("(");
         if (parameters != null) {
-            for (int p = 0; p < parameters.size();) {
+            for (int p = 0; p < parameters.size(); ) {
                 if (p != 0) {
                     out.write(", ");
                 }
@@ -551,19 +608,21 @@ class JavaWriter implements Closeable {
     }
 
     public JavaWriter beginConstructor(Set<Modifier> modifiers,
-            String... parameters) throws IOException {
+                                       String... parameters) throws IOException {
         beginMethod(null, rawType(types.peekFirst()), modifiers, parameters);
         return this;
     }
 
     public JavaWriter beginConstructor(Set<Modifier> modifiers,
-            List<String> parameters, List<String> throwsTypes) throws IOException {
+                                       List<String> parameters, List<String> throwsTypes) throws IOException {
         beginMethod(null, rawType(types.peekFirst()), modifiers, parameters,
                 throwsTypes);
         return this;
     }
 
-    /** Emits some Javadoc comments with line separated by {@code \n}. */
+    /**
+     * Emits some Javadoc comments with line separated by {@code \n}.
+     */
     public JavaWriter emitJavadoc(String javadoc, Object... params) throws IOException {
         String formatted = String.format(javadoc, params);
 
@@ -583,7 +642,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Emits a single line comment. */
+    /**
+     * Emits a single line comment.
+     */
     public JavaWriter emitSingleLineComment(String comment, Object... args) throws IOException {
         indent();
         out.write("// ");
@@ -618,7 +679,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Emit a list of enum values followed by a semi-colon ({@code ;}). */
+    /**
+     * Emit a list of enum values followed by a semi-colon ({@code ;}).
+     */
     public JavaWriter emitEnumValues(Iterable<String> names) throws IOException {
         Iterator<String> iterator = names.iterator();
 
@@ -634,23 +697,28 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Equivalent to {@code annotation(annotation, emptyMap())}. */
+    /**
+     * Equivalent to {@code annotation(annotation, emptyMap())}.
+     */
     public JavaWriter emitAnnotation(String annotation) throws IOException {
         return emitAnnotation(annotation, Collections
-                .<String, Object> emptyMap());
+                .<String, Object>emptyMap());
     }
 
-    /** Equivalent to {@code annotation(annotationType.getName(), emptyMap())}. */
+    /**
+     * Equivalent to {@code annotation(annotationType.getName(), emptyMap())}.
+     */
     public JavaWriter emitAnnotation(Class<? extends Annotation> annotationType) throws IOException {
         return emitAnnotation(type(annotationType), Collections
-                .<String, Object> emptyMap());
+                .<String, Object>emptyMap());
     }
 
     /**
      * Annotates the next element with {@code annotationType} and a {@code value}.
+     *
      * @param value an object used as the default (value) parameter of the annotation. The value will be encoded using
-     *            Object.toString(); use {@link #stringLiteral} for String values. Object arrays are written one element per
-     *            line.
+     *              Object.toString(); use {@link #stringLiteral} for String values. Object arrays are written one element per
+     *              line.
      */
     public JavaWriter emitAnnotation(
             Class<? extends Annotation> annotationType, Object value) throws IOException {
@@ -659,9 +727,10 @@ class JavaWriter implements Closeable {
 
     /**
      * Annotates the next element with {@code annotation} and a {@code value}.
+     *
      * @param value an object used as the default (value) parameter of the annotation. The value will be encoded using
-     *            Object.toString(); use {@link #stringLiteral} for String values. Object arrays are written one element per
-     *            line.
+     *              Object.toString(); use {@link #stringLiteral} for String values. Object arrays are written one element per
+     *              line.
      */
     public JavaWriter emitAnnotation(String annotation, Object value) throws IOException {
         indent();
@@ -674,7 +743,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Equivalent to {@code annotation(annotationType.getName(), attributes)}. */
+    /**
+     * Equivalent to {@code annotation(annotationType.getName(), attributes)}.
+     */
     public JavaWriter emitAnnotation(
             Class<? extends Annotation> annotationType,
             Map<String, ?> attributes) throws IOException {
@@ -683,52 +754,53 @@ class JavaWriter implements Closeable {
 
     /**
      * Annotates the next element with {@code annotation} and {@code attributes}.
+     *
      * @param attributes a map from annotation attribute names to their values. Values are encoded using Object.toString(); use
-     *            {@link #stringLiteral} for String values. Object arrays are written one element per line.
+     *                   {@link #stringLiteral} for String values. Object arrays are written one element per line.
      */
     public JavaWriter emitAnnotation(String annotation,
-            Map<String, ?> attributes) throws IOException {
+                                     Map<String, ?> attributes) throws IOException {
         indent();
         out.write("@");
         emitCompressedType(annotation);
         switch (attributes.size()) {
-        case 0:
-            break;
-        case 1:
-            Entry<String, ?> onlyEntry = attributes.entrySet().iterator()
-                    .next();
-            out.write("(");
-            if (!"value".equals(onlyEntry.getKey())) {
-                out.write(onlyEntry.getKey());
-                out.write(" = ");
-            }
-            emitAnnotationValue(onlyEntry.getValue());
-            out.write(")");
-            break;
-        default:
-            boolean split = attributes.size() > MAX_SINGLE_LINE_ATTRIBUTES
-                    || containsArray(attributes.values());
-            out.write("(");
-            scopes.push(Scope.ANNOTATION_ATTRIBUTE);
-            String separator = split ? "\n" : "";
-            for (Map.Entry<String, ?> entry : attributes.entrySet()) {
-                out.write(separator);
-                separator = split ? ",\n" : ", ";
+            case 0:
+                break;
+            case 1:
+                Entry<String, ?> onlyEntry = attributes.entrySet().iterator()
+                        .next();
+                out.write("(");
+                if (!"value".equals(onlyEntry.getKey())) {
+                    out.write(onlyEntry.getKey());
+                    out.write(" = ");
+                }
+                emitAnnotationValue(onlyEntry.getValue());
+                out.write(")");
+                break;
+            default:
+                boolean split = attributes.size() > MAX_SINGLE_LINE_ATTRIBUTES
+                        || containsArray(attributes.values());
+                out.write("(");
+                scopes.push(Scope.ANNOTATION_ATTRIBUTE);
+                String separator = split ? "\n" : "";
+                for (Map.Entry<String, ?> entry : attributes.entrySet()) {
+                    out.write(separator);
+                    separator = split ? ",\n" : ", ";
+                    if (split) {
+                        indent();
+                    }
+                    out.write(entry.getKey());
+                    out.write(" = ");
+                    Object value = entry.getValue();
+                    emitAnnotationValue(value);
+                }
+                popScope(Scope.ANNOTATION_ATTRIBUTE);
                 if (split) {
+                    out.write("\n");
                     indent();
                 }
-                out.write(entry.getKey());
-                out.write(" = ");
-                Object value = entry.getValue();
-                emitAnnotationValue(value);
-            }
-            popScope(Scope.ANNOTATION_ATTRIBUTE);
-            if (split) {
-                out.write("\n");
-                indent();
-            }
-            out.write(")");
-            break;
+                out.write(")");
+                break;
         }
         out.write("\n");
         return this;
@@ -773,7 +845,7 @@ class JavaWriter implements Closeable {
 
     /**
      * @param pattern a code pattern like "int i = %s". Newlines will be further indented. Should not contain trailing
-     *            semicolon.
+     *                semicolon.
      */
     public JavaWriter emitStatement(String pattern, Object... args) throws IOException {
         checkInMethod();
@@ -791,7 +863,7 @@ class JavaWriter implements Closeable {
 
     /**
      * @param controlFlow the control flow construct and its code, such as "if (foo == 5)". Shouldn't contain braces or newline
-     *            characters.
+     *                    characters.
      */
     public JavaWriter beginControlFlow(String controlFlow, Object... args) throws IOException {
         checkInMethod();
@@ -804,7 +876,7 @@ class JavaWriter implements Closeable {
 
     /**
      * @param controlFlow the control flow construct and its code, such as "else if (foo == 10)". Shouldn't contain braces or
-     *            newline characters.
+     *                    newline characters.
      */
     public JavaWriter nextControlFlow(String controlFlow, Object... args) throws IOException {
         popScope(Scope.CONTROL_FLOW);
@@ -822,7 +894,7 @@ class JavaWriter implements Closeable {
 
     /**
      * @param controlFlow the optional control flow construct and its code, such as "while(foo == 20)". Only used for "do/while"
-     *            control flows.
+     *                    control flows.
      */
     public JavaWriter endControlFlow(String controlFlow, Object... args) throws IOException {
         popScope(Scope.CONTROL_FLOW);
@@ -837,7 +909,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Completes the current method declaration. */
+    /**
+     * Completes the current method declaration.
+     */
     public JavaWriter endMethod() throws IOException {
         Scope popped = scopes.pop();
         // support calling a constructor a "method" to support the legacy code
@@ -850,7 +924,9 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Completes the current constructor declaration. */
+    /**
+     * Completes the current constructor declaration.
+     */
     public JavaWriter endConstructor() throws IOException {
         popScope(Scope.CONSTRUCTOR);
         indent();
@@ -858,47 +934,51 @@ class JavaWriter implements Closeable {
         return this;
     }
 
-    /** Returns the string literal representing {@code data}, including wrapping quotes. */
+    /**
+     * Returns the string literal representing {@code data}, including wrapping quotes.
+     */
     public static String stringLiteral(String data) {
         StringBuilder result = new StringBuilder();
         result.append('"');
         for (int i = 0; i < data.length(); i++) {
             char c = data.charAt(i);
             switch (c) {
-            case '"':
-                result.append("\\\"");
-                break;
-            case '\\':
-                result.append("\\\\");
-                break;
-            case '\b':
-                result.append("\\b");
-                break;
-            case '\t':
-                result.append("\\t");
-                break;
-            case '\n':
-                result.append("\\n");
-                break;
-            case '\f':
-                result.append("\\f");
-                break;
-            case '\r':
-                result.append("\\r");
-                break;
-            default:
-                if (Character.isISOControl(c)) {
-                    result.append(String.format("\\u%04x", (int) c));
-                } else {
-                    result.append(c);
-                }
+                case '"':
+                    result.append("\\\"");
+                    break;
+                case '\\':
+                    result.append("\\\\");
+                    break;
+                case '\b':
+                    result.append("\\b");
+                    break;
+                case '\t':
+                    result.append("\\t");
+                    break;
+                case '\n':
+                    result.append("\\n");
+                    break;
+                case '\f':
+                    result.append("\\f");
+                    break;
+                case '\r':
+                    result.append("\\r");
+                    break;
+                default:
+                    if (Character.isISOControl(c)) {
+                        result.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        result.append(c);
+                    }
             }
         }
         result.append('"');
         return result.toString();
     }
 
-    /** Build a string representation of a type and optionally its generic type arguments. */
+    /**
+     * Build a string representation of a type and optionally its generic type arguments.
+     */
     public static String type(Class<?> raw, String... parameters) {
         if (parameters.length == 0) {
             return raw.getCanonicalName();
@@ -918,7 +998,9 @@ class JavaWriter implements Closeable {
         return result.toString();
     }
 
-    /** Build a string representation of the raw type for a (optionally generic) type. */
+    /**
+     * Build a string representation of the raw type for a (optionally generic) type.
+     */
     public static String rawType(String type) {
         int lessThanIndex = type.indexOf('<');
         if (lessThanIndex != -1) {
@@ -932,7 +1014,9 @@ class JavaWriter implements Closeable {
         out.close();
     }
 
-    /** Emits the modifiers to the writer. */
+    /**
+     * Emits the modifiers to the writer.
+     */
     private void emitModifiers(Set<Modifier> modifiers) throws IOException {
         if (modifiers.isEmpty()) {
             return;
