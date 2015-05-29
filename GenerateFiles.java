@@ -57,7 +57,6 @@ public class GenerateFiles {
 
     public static void main(String[] args) throws Exception {
         String baseDir = "./demo/src/main/java/";
-        Runtime.getRuntime().exec("rm -rf " + baseDir);
 
         for (InjectPattern pattern : InjectPattern.values()) {
             String basePackage = pattern.name().toLowerCase();
@@ -73,7 +72,7 @@ public class GenerateFiles {
             ///
 
 
-            int classCount = 1000;
+            int classCount = Integer.parseInt(System.getProperty("count", "1000"));
             String mainJava = "Main.java";
             Path mainFile = Paths.get(baseDir + basePackage, mainJava);
             try (Writer printWriter = Files.newBufferedWriter(mainFile)) {
