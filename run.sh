@@ -7,11 +7,8 @@ fi
 
 COUNT=$1
 
-echo "remove trashes"
-rm -rf demo/src/main/java/pattern*
 echo "compile generator"
 javac GenerateFiles.java
-echo "generate"
 java -Dcount=$COUNT GenerateFiles
 echo "build project"
 mvn compile -f demo

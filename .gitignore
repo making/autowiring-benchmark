@@ -3,3 +3,4 @@
 out
 target
 *.class
+demo/src/main/java/pattern*

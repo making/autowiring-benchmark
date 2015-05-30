@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
@@ -57,7 +58,22 @@ public class GenerateFiles {
 
     public static void main(String[] args) throws Exception {
         String baseDir = "./demo/src/main/java/";
+        // delete whole directroy
+        System.out.println("Delete old files");
+        Files.walkFileTree(Paths.get(baseDir), new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
 
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        System.out.println("Generate files");
         for (InjectPattern pattern : InjectPattern.values()) {
             String basePackage = pattern.name().toLowerCase();
             String servicePackage = basePackage + ".service";
